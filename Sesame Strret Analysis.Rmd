@@ -1,0 +1,412 @@
+---
+title: "Sesame Street Report"
+author: 'Dillon Hector'
+date: 'February 26 2021'
+output:
+  pdf_document:
+    fig_caption: yes
+    extra_dependencies: ["flafter"]
+header-includes:
+ - \renewcommand{\topfraction}{.85}
+ - \renewcommand{\bottomfraction}{.7}
+ - \renewcommand{\textfraction}{.15}
+ - \renewcommand{\floatpagefraction}{.66}
+ - \setcounter{topnumber}{3}
+ - \setcounter{bottomnumber}{3}
+ - \setcounter{totalnumber}{4}
+---
+
+```{r Front Matter, include=FALSE}
+## Front Matter
+
+# clean up & set default chunk options
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+
+# packages
+library(tidyverse) 
+library(mosaic)    
+library(ggformula)  
+library(car)        
+library(tinytex)    
+library(readxl)
+library(MASS)
+library(corrplot)
+library(scales)
+library(cowplot)
+library(stargazer)
+
+# read in data
+sesame <- read_excel("/Users/ishtiakhasan/Desktop/Stat470W/Stat470W/sesame.xlsx")
+
+# use this space to do any data processing you need
+
+sesame <- sesame[,c('age', 'viewcat', 'viewenc', 'prebody', 'prenumb', 'prelet', 
+                    'setting', 'peabody', 'postbody', 'postnumb', 'postlet')]
+
+# creating three new variables for the posttest - pretest scores
+
+sesame <-
+  sesame %>% 
+  mutate(diffbody = postbody - prebody) %>%
+  mutate(difflet = postlet - prelet) %>%
+  mutate(diffnumb = postnumb - prenumb)
+
+sesame
+
+```
+## 1. Project Description
+
+Dr Brown from the "Children Television Workshop" asked our group to analyze if the children's show "Sesame Street" improves a child's test scores on three different categories being Letters, Numbers, and Body Parts. Dr Brown is also interested in which of these three categories children learn the most from watching Sesame Street. The collected data is from a study questioning the improvements Sesame Street has on children in different demographics. Some aspects of how the data was collected are as follows:
+
+- Children in Disadvantaged and Advantaged homes
+- Children aged 3-5
+- Children from five different areas 
+- Scored children given a test before and after watching for a 6 months time frame
+
+The data was taken for the purpose of asking a different set of research questions then the ones that we will be answering so some variables will be left out in analysis. 
+
+Dr Brown is in the analysis phase of the experiment and has tasked Group 5 of the STAT 470W class to answer her research questions.
+
+## 1.1 Research Questions
+
+**Question 1: Does Sesame Street improve a child's score in the categories of letters, numbers, and body parts?**  
+
+**Question 2: Which of these categories does Sesame Street improve the most?**
+
+## 1.2 Variables
+
+The Children Television Workshop prepared variables to measure a child's knowledge on topics before and after watching Sesame Street. Our interest is in the categories of letters, numbers, and body parts so we will only include the pre and post watching scores for these categories. The measuring of the test scores have a different max score, but the idea is that higher the score the better the results. The researchers also collected some variables to explain the scores such as age, viewcat, and setting. Shown below is table 1 which summarizes the variables relevant to our analysis.
+
+```{r variables, echo = F, results='markup'}
+## Table 1 (The Variables)
+
+# creating the data frame with variable descriptions
+
+# adding in the names of the variables
+
+variable.desc1 <- data.frame(Name = c("Age", "Viewcat", "Viewenc", "Prebody", "Prenumb",
+                                      "Prelet", "Postbody", "PostNumb", "Postlet", 
+                                      "DIffbody", "Diffnumb", "Difflet"))
+
+# also adding in the types of the variables
+
+variable.desc1$Type <- c("Numerical", "Categorical", "Categorical", "Numerical", 
+                         "Numerical", "Numerical", "Numerical", "Numerical", 
+                         "Numerical", "Numerical", "Numerical", "Numerical")
+
+# including in the names of the variables
+
+variable.desc1$Notes <- c("In months", "1-4 scale, 1 if children rarely watched the show 
+to a 4 if the children watched the show on average more than 5 times a week", "1 if 
+children were encouraged to view Sesame St 2 if children were not encouraged", "Pre test 
+on knowledge about body parts (maximum score-32)", "Pre test on knowledge about numbers
+(maximum score-54)", "Pre test on knowledge about letters (maximum score-58)", "Post test 
+on knowledge about body parts (maximum score-32)", "Post test on knowledge about numbers 
+(maximum score-54)", "Post test on knowledge about letters (maximum score-58)", 
+"Difference of Postbody - Prebody", "Difference of Postnumb - Prenumb", 
+"Difference of Postlet - Prelet")
+
+# generating the first table
+
+knitr::kable(variable.desc1, format = 'latex', caption 
+             = "Overview of Variables used in Analysis")
+
+# viewing the first table
+
+view(variable.desc1)
+
+```
+# 2. Exploratory Data Analysis (EDA)
+
+The calculation for the response variables are done to show improvement of a child's score by subtracting Post - Pre test scores. The positive correlation between pre and post test scores caused us to make this calculation as the response. Creating this response will also make it easier to read plots with this variable on each y-axis.
+
+For the start of this EDA we will be plotting three scatter plots that show the pre scores compared to the difference of post-pre scores. This will show us the relationship between a low and high pretest score and whether or not the scores improve.
+
+```{r scatter, fig.cap = "Pre test Scores Vs Difference in scores", echo = F, out.width="50%", fig.align="center"}
+## Figure 1 (Pre test Scores Vs Difference in Scores)
+
+# creating the scatterplot of pre test Scores vs the difference in scores for body parts
+
+scatter1 <- gf_point(diffbody ~ prebody, data = sesame, xlab = "Pretest of body parts", 
+                     ylab = "Post - Pre Test")
+
+# creating the scatterplot of pre test Scores vs the difference in scores for numbers
+
+scatter2 <- gf_point(diffnumb ~ prenumb, data = sesame, xlab = "Pretest of numbers", 
+                     ylab = "Post - Pre test scores")
+
+# creating the scatterplot of pre test Scores vs the difference in scores for letters
+
+scatter3 <- gf_point(difflet ~ prelet, data = sesame, xlab = "Pretest of letters", 
+                     ylab = "Post - Pre test scores")
+
+# plotting the three scatterplots of pre test Scores compared to the difference in scores
+
+plot_grid(scatter1, scatter2, scatter3, nrow = 1, ncol = 3)
+
+```
+Above, we can see above that almost all of the tests seem to show a negative relationship which means that if a child scored low on a pretest they usually score higher on their post test. On the other hand if a child already scored high on the pre test they seem to only do the same or worse. This means that the pre test scores are likely to be influential in predicting the improvement of a child in one of the categories.
+
+Next, we will look at a categorical variable view time compared against difference of scores to see whether watching the show for different amounts of time has a relationship with scores.
+
+```{r box, fig.cap = "Boxplot of Viewing Time Vs Difference in Scores", echo = F, out.width="50%", fig.align="center"}
+## Figure 2 (Boxplot of Viewing Time Vs Difference in Scores)
+
+# converting the variable viewcat into a categorical variable
+
+sesame$viewcat <- as.factor(sesame$viewcat)
+
+# creating a boxplot of viewing time vs the difference in scores for body parts
+
+boxplot1 <- gf_boxplot(diffbody ~ viewcat, data = sesame, xlab = "Viewing Time 
+                       (1 = Minimal, 4 = Max)", ylab = "(Post-Pre) Body")
+
+# creating a boxplot of viewing time vs the difference in scores for numbers
+
+boxplot2 <- gf_boxplot(diffnumb ~ viewcat, data = sesame, xlab = "Viewing Time 
+                       (1 = Minimal, 4 = Max)", ylab = "(Post-Pre) Number")
+
+# creating a boxplot of viewing time vs the difference in scores for letters
+
+boxplot3 <- gf_boxplot(difflet ~ viewcat, data = sesame, xlab = "Viewing Time 
+                       (1 = Minimal, 4 = Max)", ylab = "(Post-Pre) Letter")
+
+# plotting the three boxplots of viewing time compared to the difference in scores
+
+plot_grid(boxplot1, boxplot2, boxplot3, nrow = 1, ncol = 3)
+
+```
+We can see that the three boxplots in figure 2 show an increase in difference of scores (post-pre) in a positive way. This means that if a child watched more sesame street they are more likely to improve there post score. This gives evidence for the question "Does watching Sesame Street Improve a Child's score" as being positive which means that it does affect their test score.
+
+For our next three graphs we are going to plot the differences of the test data with Viewing Time to see if we have a relationship. Just to note a positive score is better because we subtracted post score - pre score. So if a post score is higher the number should be positive or red in the plots. So if we see most of the points highlighted in red we can assume that most of the children did improve there pre test score. These graphs also give information on the second research question asking which category has the most improvement. 
+
+```{r point, fig.cap = "Viewing Time Vs the Differences of Test Scores", echo = F, out.width="50%", fig.align="center"}
+## Figure 3 (Viewing Time Vs the Differences of Test Scores)
+
+# creating the scatterplot of viewing time vs the difference in scores for body parts
+
+relation1 <- gf_point(sesame$diffbody ~ sesame$viewcat, col = ifelse(sesame$diffbody > 0,
+            'red','black'), xlab = "Viewing Time", ylab = "Difference for Body Parts")
+
+# creating the scatterplot of viewing time vs the difference in scores for letters
+
+relation2 <- gf_point(sesame$difflet ~ sesame$viewcat, col = ifelse(sesame$difflet > 0,
+            'red','black'), xlab = "Viewing Time", ylab = "Difference for Letters")
+
+# creating the scatterplot of viewing time vs the difference in scores for numbers
+
+relation3 <- gf_point(sesame$diffnumb ~ sesame$viewcat, col = ifelse(sesame$diffnumb > 0,
+            'red','black'), xlab = "Viewing Time", ylab = "Difference for Numbers")
+
+# plotting the three scatterplots of viewing time compared to the difference in scores
+
+plot_grid(relation1, relation2, relation3, nrow = 1, ncol = 3)
+
+```
+We can see in the plots above that viewing time does seem to have relationship between the difference of tests. This means that it does matter how much the child watches when inferring about the difference of scores. We can see though that Numbers and Letters definitely have more post - pre test scores in the positive range which infers that these two categories have the most growth. Body parts seem to have more in the positive range but not as much as the others. 
+
+To better view this we will show a grid of percentages of positive differences for each category for each of the viewing time category.
+
+```{r proportionz, echo =F}
+## Table 2 (The Percentages of Positive Differences)
+
+# selecting by each viewcat in the sesame data frame
+
+sesame.a <- sesame[sesame$viewcat == 1,]
+sesame.b <- sesame[sesame$viewcat == 2,]
+sesame.c <- sesame[sesame$viewcat == 3,]
+sesame.d <- sesame[sesame$viewcat == 4,]
+
+# calculates the percentages of positive differences for body parts
+
+propbody.a <- sum(sesame.a$diffbody > 0)/length(sesame.a$diffbody)
+propbody.b <- sum(sesame.b$diffbody > 0)/length(sesame.b$diffbody)
+propbody.c <- sum(sesame.c$diffbody > 0)/length(sesame.c$diffbody)
+propbody.d <- sum(sesame.d$diffbody > 0)/length(sesame.d$diffbody)
+
+# calculates the percentages of positive differences for letters
+
+proplett.a <- sum(sesame.a$difflet > 0)/length(sesame.a$difflet)
+proplett.b <- sum(sesame.b$difflet > 0)/length(sesame.b$difflet)
+proplett.c <- sum(sesame.c$difflet > 0)/length(sesame.c$difflet)
+proplett.d <- sum(sesame.d$difflet > 0)/length(sesame.d$difflet)
+
+# calculates the percentages of positive differences for numbers
+
+propnumb.a <- sum(sesame.a$diffnumb > 0)/length(sesame.a$diffnumb)
+propnumb.b <- sum(sesame.b$diffnumb > 0)/length(sesame.b$diffnumb)
+propnumb.c <- sum(sesame.c$diffnumb > 0)/length(sesame.c$diffnumb)
+propnumb.d <- sum(sesame.d$diffnumb > 0)/length(sesame.d$diffnumb)
+
+# adding names for the percentages of positive differences into a data frame
+
+variable.desc2 <- data.frame(Names = c(
+"Percentage Improved of Body Parts for Viewcat = 1", 
+"Percentage Improved of Body Parts for Viewcat = 2", 
+"Percentage Improved of Body Parts for Viewcat = 3", 
+"Percentage Improved of Body Parts for Viewcat = 4", 
+"Percentage Improved of Letters for Viewcat = 1", 
+"Percentage Improved of Letters for Viewcat = 2",
+"Percentage Improved of Letters for Viewcat = 3", 
+"Percentage Improved of Letters for Viewcat = 4", 
+"Percentage Improved of Numbers for Viewcat = 1",
+"Percentage Improved of Numbers for Viewcat = 2",
+"Percentage Improved of Numbers for Viewcat = 3",
+"Percentage Improved of Numbers for Viewcat = 4"))
+
+# adding a value column with all the calculated positive differences
+
+variable.desc2$Value <- c(propbody.a, propbody.b, propbody.c, propbody.d,
+                         proplett.a, proplett.b, proplett.c, proplett.d,
+                         propnumb.a, propnumb.b, propnumb.c, propnumb.d)
+
+# generating the second table
+
+knitr::kable(variable.desc2, format = 'latex', caption 
+             = "Percentages of improved Scores per category")
+
+# view the second table
+
+view(variable.desc2)
+
+```
+The proportion of improvement shown in the table for each category by viewcat, shows that letters and numbers are almost close to identical with a substantial difference in body parts.
+
+# 3. Statistical Analysis 
+
+## Research Question 1: "Does Sesame Street improve a child's score in the categories of letters, numbers, and body parts?"
+
+We fit three linear regression models to predict whether viewing time of Sesame Street causes an improvement in the scores pertaining to the three categories of interest. We will be using the difference variables created in the EDA as our response to answer this question. The equation for this model is as follows
+
+$$\text{DiffTest}=\beta_0+\beta_1(X_i)+\epsilon_i,$$
+Where $\beta_0$ is the mean of DiffTest when the viewing time is equal to 0 and $\beta_1$  is the amount $\beta_0$ will increase for every increase in the Viewing Time variable. 
+
+The model will use four levels of Viewing Time to predict the overall improvement in test scores. We should give a reminder to ourselves that the response variable is the difference of Post - Pre test scores. So a positive number means that the Post test score is higher than the pre score. 
+
+$$\text{DiffBody}=12.55+1.85(ViewingCat2)+2.94(ViewingCat3)+3.96(ViewingCat4)-.51(prebody)$$
+In our first model we fit Body Test difference with viewing time and pre-body as our predictors. After fitting the model we can see that all of the factors have some level of significance due to all p-values being < .05. This number is our cutoff to tell whether variables added to a model are significant. One interesting effect to note is that pre-body has a negative factor on the overall outcome. This can be due to what we saw in figure 1, where as the pretest scores rose the difference in scores lowered. 
+
+
+For our second model we will fit a linear regression model to Difference of Numbers:
+
+$$\text{DiffNumb}=4.76+3.76(ViewingCat2)+6.81(ViewingCat3)+8.64(ViewingCat4)-.43(Prenumb)+.39(Prebody)$$
+After fitting this model we can see that the viewing time for learning numbers does influence test scores positively due to all of the coefficients for those terms being positive. Again, we also added the prenumb variable to the model and see that it also has a negative relationship. An interesting find is that Prebody has a positive relationship with our model which means that when a child scores higher on the prebody test they are likely to score higher on the post numb test. 
+
+The last model for research question will for the difference of letters to viewing category:
+
+$$\text{DiffLetter}=-2.00+4.69(ViewingCat2)+10.69(ViewingCat3)+12.26(ViewingCat4) -.40(Prelet)+.56(Prebody)$$
+Viewing the fitted model we can see that viewing time and Prebody have a positive relationship in our model. Again, we observe Prelet having a negative coefficient which adds to the case that when a child originally scores a high score on the pretest, they are less likely to improve that score.  
+
+In the three models above we looked at which variables affected each of the three chosen response variables. The variables that were added to the models all had significance to the response which we set at having a p-value < .05.  
+
+## Research Question 2: "Which of these categories does Sesame Street improve the most?"
+
+When observing Figure 3 (the plot of differences of the test data against the with Viewing Time) and table 2 (the percentages of positive differences for each test category for each of the viewing time category) we conclude that letters improved the most. In Figure 3 we notice that when viewing time increases, the Difference of Letter's plot contains fewer negative points. And when observing table 3, we also notice that when viewing time increase, not only does the percentage of positive values increases more for letters, but also has the highest values for each viewing time categories compared against test categories.
+
+# 4. Recommendations 
+
+*Succinct response to each question laid out in 1.2.  This a much shorter version of section 3, and focuses on conclusions rather than the analyses.*
+
+**Question 1:** Does Sesame Street improve a child's score in the categories of letters, numbers, and body parts?
+
+The Viewing of Sesame Street was proven to improve Letters, Numbers, and Body Parts.
+
+**Question 2:** Which of these categories does Sesame Street improve the most?
+
+Sesame Street improves a children's learning of letters the most. When comparing the three categories we saw that The slope of the Letter scores were higher than numbers and body parts. 
+
+# 5. Resources 
+
+For resources related to One way Anova, please visit https://online.stat.psu.edu/stat200/lesson/10
+
+For resources related to Simple Linear Regression, please visit https://online.stat.psu.edu/stat462/node/79/
+
+For resources related to Multiple Linear Regression, please visit https://online.stat.psu.edu/stat462/node/145/
+
+# 6. Additional Considerations
+
+### Data used in the analysis
+
+The data used in this analysis was not collected for the analysis questions. This can lead to problems with the necessary assumptions that need to be met for this analysis. When asking a research question, make sure that the data being used is able to properly meet these assumptions for the models used in this analysis. To more on this topic please visit the resources I have listed in the Resources section of the project.
+
+### True meaning of conclusions
+
+When looking at the answers to the research questions please keep in mind that there is a lot of variance in this data that has not been explained. The  adjusted $R^2$ term which is a number that rises when more variance is explained is considerably low in these models. This may be due to the nature of the data or how we chose to model this data but just keep that in mind. Also, there may have been some outside factors that were not included in the data that may have affected our results. 
+
+### Process of choosing response variable
+
+For the analysis we chose to create a response variable of Post-Pre test scores. This was due to the problem of when a child scores on the pre test that child is almost certainly going to score at least that score or higher on the post test. So when performing analysis in our EDA section the graphs would always look like a positive relationship even though a particular category may not have that positive of a relationship. 
+
+### Variable Selection
+
+When choosing variables we looked at the p-value to choose our predictors. This can be formally called the backward selection method where we first add all of the variables and then remove one insignificant variable at a time until we received our best model. 
+
+# Technical Appendix  
+
+## Research Question 1: Summaries and plots of the models
+
+### Body Parts Category Summary:
+
+```{r bodydiff, echo = F, warning = F, fig.cap = "Model Plots to Check for assumptions of Bodydiff regression", out.width="50%", fig.align="center"}
+## Summary and Figures 4-5 (Body Parts Category)
+
+# creating a linear regression model for Body Parts
+
+bodymodel <- lm(diffbody ~ viewcat + prebody, data = sesame)
+
+# produces the summary results of the Body Parts fitted model
+
+summary(bodymodel)
+
+# plotting the Residuals vs Fitted and Normal QQ plot for Body Parts Model
+
+qplt2 <- plot(bodymodel, which = 1)
+rplt2 <- plot(bodymodel, which = 2)
+
+```
+### Number Category Summary:
+
+```{r numbdiff, fig.cap = "Model Plots to check for assumption of Number Diff regressions", echo = F, out.width="50%", fig.align="center"}
+## Summary and Figures 6-7 (Numbers Category)
+
+# creating a linear regression model for Numbers
+
+numbmodel <- lm(diffnumb ~ viewcat + prenumb + prebody, data = sesame)
+
+# produces the summary results of the Numbers fitted model
+
+summary(numbmodel)
+
+# plotting the Residuals vs Fitted and Normal QQ plot for Numbers Model
+
+qplt1 <- plot(numbmodel, which = 1)
+rplt1 <- plot(numbmodel, which = 2)
+
+```
+### Letter Category Summary:
+
+```{r lettdiff, fig.cap = "Model Plots to check for assumptions of Letter Diff regression", echo = F, out.width="50%", fig.align="center"}
+## Summary and Figures 8-9 (Letter Category)
+
+# creating a linear regression model for Letters
+
+lettmodel <- lm(difflet ~ viewcat + prelet + prebody, data = sesame)
+
+# produces the summary results of the Letters fitted model
+
+summary(lettmodel)
+
+# plotting the Residuals vs Fitted and Normal QQ plot for Letters Model
+
+qplt<-plot(lettmodel, which = 1)
+rplt<-plot(lettmodel, which = 2)
+
+```
+
+Looking at the various plots for the models above we can see that the model assumptions for modeling in linear regression have been met. We can see in the figures above that some of the normality assumptions shown in the qq plot seem a a little skewed. This is okay though given that regression modeling is pretty good with normality violations. In the residual vs fitted plots we can see that the variances all seem to be similar without any skewness.
+
+### R Script
+```{r ref.label=c('Front Matter', 'variables', 'scatter', 'box', 'point', 'proportionz', 'bodydiff', 'numbdiff', 'lettdiff'), echo=TRUE, eval=FALSE}
+# Reprinted code chunks used previously for analysis
+```
